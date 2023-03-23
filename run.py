@@ -6,12 +6,31 @@ import ocrmypdf
 import os
 import sqlite3
 
+#options 
+
 company_name = "company"
-do_ocr = True #use if you are having with random spaces between words
+
+#use if you are having with random spaces between words
+do_ocr = True 
+
+#end options
+
+#debug options
+
+#delete ocr_pdf after use
+delete_ocr_pdf = True
+
+#delete db after use
+delete_db = True
+
+#end debug options
+
+if os.path.exists("files.db"):
+    os.remove("files.db")
+if os.path.exists("files.db-journal"):
+    os.remove("files.db-journal")
 
 file_dir = os.getcwd()
-
-
 con = sqlite3.connect("files.db")
 cur = con.cursor()#
 table = """
@@ -27,6 +46,8 @@ def ConvertPdf(file) -> str:
     """open the file(pdf) and return the text"""
     if not do_ocr:
         return file
+    if os.path.exists(f'temp/ocr_{file}'):
+        return f'temp/ocr_{file}'
     try:
         ocrmypdf.ocr(file, f'temp/ocr_{file}',force_ocr = True)
     except Exception as e:
@@ -120,6 +141,30 @@ def GetDetails(lines):
 def GetLines(pdf):
     return SplitPdf(GetText(converted_pdf))
 
+
+def SendEmails(list_of_unique_emails):
+    for tup_email in list_of_unique_emails :
+        email = tup_email[0]
+
+        attachments = []
+
+        email_name: str = "" # THIS NEEDS CHECKED NOT SURE HOW TO HANDLE MULTIPLE NAMES (no spec).
+
+        sql_attachments = cur.execute("SELECT pdf FROM FILES WHERE email = ?", (email,),).fetchall()
+        for attachment in sql_attachments:
+            attachments.append(attachment[0])
+
+        sql_names = cur.execute("SELECT DISTINCT name FROM FILES WHERE email = ?", (email,),).fetchall()
+        for count,name in enumerate(sql_names):
+            email_name += name[0]
+            if len(sql_names) > 1 and count != len(sql_names)-1:
+                email_name += " & " 
+
+        SendEmail(email_name,email,attachments)
+
+
+
+
 if __name__ == '__main__':
     errors = ""
     pdfs = GetPdf()
@@ -136,43 +181,33 @@ if __name__ == '__main__':
         cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
 
 
-        #excel = GetExcel(pdf)
+    list_of_unique_emails = cur.execute("SELECT DISTINCT email FROM FILES").fetchall()
 
-        #attachments = [pdf]
-        #if excel != None:
-        #    attachments.append(excel)
+    SendEmails(list_of_unique_emails)
 
-        #SendEmail(name,email,attachments)
-
-        
-
-
-    DeleteTempPdf()
+    if delete_ocr_pdf:
+        DeleteTempPdf()
     if errors != "":
         print("ERRORS:")
         print(errors)
     con.commit()
     cur.close()
     con.close()
+    if delete_db:
+        import time
+        print("waiting for delete")
+        time.sleep(5)
+        if os.path.exists("files.db"):
+            os.remove("files.db")
+        if os.path.exists("files.db-journal"):
+            os.remove("files.db-journal")
+    
 
 
 
 
 
-def functions():
-    """just stuff that will be needed"""
 
-    #for getting all the details from an email
-    temp_email = "bob@gmail.com"
-    for result in cur.execute("SELECT * FROM FILES WHERE email = ?", (temp_email,),).fetchall():
-        print(result)
-        print(" ")
-
-    #finding out all unique emails
-    print("new statment :)")
-    for result in cur.execute("SELECT DISTINCT email FROM FILES").fetchall():
-        print(result[0])
-        print(" ")
     
 
 
