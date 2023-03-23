@@ -4,7 +4,7 @@ import datetime
 import glob
 import ocrmypdf
 
-file_dir = "E:\\projects\\bunpdf\\"
+file_dir = "E:\\projects\\pdf_reader"
 
 
 
@@ -12,15 +12,21 @@ file_dir = "E:\\projects\\bunpdf\\"
 def ConvertPdf(file) -> str:
     """open the file(pdf) and return the text"""
     try:
-        ocrmypdf.ocr(file, f'ocr_{file}')
+        ocrmypdf.ocr(file, f'ocr_{file}',force_ocr = True)
     except Exception as e:
         print(e)
         return None
     return f'ocr_{file}'
 
+def GetText(file):
+    if file == None:
+        return None
+    reader = PdfReader(file)
+    page = reader.pages[0]
+    return page.extract_text()
 
-
-
+def DeletePdf(file):
+    
 
 def SplitPdf(text):
     """Split the pdf into lines"""
@@ -41,7 +47,7 @@ def ExtractEmailAddress(lines):
     for line in lines:
         splitlines = line.split(":")
         for index, splitline in enumerate(splitlines):
-            if splitline.strip() == "Email  address" or splitline.strip() == "Email address":
+            if splitline.strip() == "Email address":
                 print(splitlines[index])
     return ""
 
@@ -92,15 +98,17 @@ def SendEmail(name, email, attachments):
 if __name__ == '__main__':
     pdfs = GetPdf()
     for pdf in pdfs:
-        text = OpenPdf(pdf)
+        text = GetText(ConvertPdf(pdf))
         lines = SplitPdf(text)
-        name = ExtractName(lines)
-        email = ExtractEmailAddress(lines)
-        excel = GetExcel(pdf)
-        attachments = [pdf]
-        if excel != None:
-            attachments.append(excel)
-        SendEmail(name,email,attachments)
+        for line in lines:
+            print(lines)
+        #name = ExtractName(lines)
+        #email = ExtractEmailAddress(lines)
+        #excel = GetExcel(pdf)
+        #attachments = [pdf]
+        #if excel != None:
+        #    attachments.append(excel)
+        #SendEmail(name,email,attachments)
 
     
 
