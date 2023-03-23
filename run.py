@@ -5,13 +5,17 @@ import glob
 import ocrmypdf
 import os
 
-file_dir = "E:\\projects\\pdf_reader"
+company_name = "company"
+do_ocr = True
 
+file_dir = os.getcwd()
 
 
 # we should really be using ocr to make sure it acc works
 def ConvertPdf(file) -> str:
     """open the file(pdf) and return the text"""
+    if not do_ocr:
+        return file
     try:
         ocrmypdf.ocr(file, f'temp/ocr_{file}',force_ocr = True)
     except Exception as e:
@@ -19,14 +23,16 @@ def ConvertPdf(file) -> str:
         return None
     return f'temp/ocr_{file}'
 
-def GetText(file):
+def GetText(file, page = 0):
+    """Get the text from the pdf"""
     if file == None:
         return None
     reader = PdfReader(file)
-    page = reader.pages[0]
+    page = reader.pages[page]
     return page.extract_text()
 
 def DeleteTempPdf():
+    """Delete the temporary ocr pdf"""
     files = glob.glob('temp/*')
     for f in files:
         os.remove(f)
@@ -50,8 +56,8 @@ def ExtractEmailAddress(lines):
     for line in lines:
         splitlines = line.split(":")
         for index, splitline in enumerate(splitlines):
-            if splitline.strip() == "Email address":
-                print(splitlines[index])
+            if splitline.strip() == "Email Address":
+                return splitlines[index+1].strip()
     return ""
 
 def GetDate():
@@ -89,17 +95,37 @@ def SendEmail(name, email, attachments):
     ol=win32com.client.Dispatch("outlook.application")
     olmailitem=0x0 
     newmail=ol.CreateItem(olmailitem)
-    newmail.Subject = 'Company - '+GetDate()+" - "+name.split(".")[0]
+    newmail.Subject = f'{company_name} - {GetDate()} - {name.split(".")[0]}'
     newmail.To=''+email
     newmail.CC=''+email
 
     for attach in attachments:
-        newmail.Attachments.Add(file_dir+attach)
+        newmail.Attachments.Add(file_dir+"\\"+attach)
 
     newmail.Display() 
 
 if __name__ == '__main__':
+    errors = ""
+    pdfs = GetPdf()
+    for pdf in pdfs:
+        converted_pdf = ConvertPdf(pdf)
+        if converted_pdf == None:
+            errors += f'{pdf} failed'
+            continue
+        text = GetText(converted_pdf)
+        lines = SplitPdf(text)
+        name = ExtractName(lines)
+        email = ExtractEmailAddress(lines)
+        excel = GetExcel(pdf)
+        attachments = [pdf]
+        if excel != None:
+            attachments.append(excel)
+        SendEmail(name,email,attachments)
+
     DeleteTempPdf()
+    if errors != "":
+        print("ERRORS:")
+        print(errors)
 
     
 
