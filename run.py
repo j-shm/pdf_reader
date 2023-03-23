@@ -4,12 +4,24 @@ import datetime
 import glob
 import ocrmypdf
 import os
+import sqlite3
 
 company_name = "company"
 do_ocr = True #use if you are having with random spaces between words
 
 file_dir = os.getcwd()
 
+
+con = sqlite3.connect("files.db")
+cur = con.cursor()#
+table = """
+CREATE TABLE IF NOT EXISTS FILES (
+	pdf text PRIMARY KEY,
+    email text,
+	name text
+);
+"""
+cur.execute(table)
 
 def ConvertPdf(file) -> str:
     """open the file(pdf) and return the text"""
@@ -120,19 +132,47 @@ if __name__ == '__main__':
         
         lines = GetLines(converted_pdf)
         name,email = GetDetails(lines)
-        excel = GetExcel(pdf)
+        
+        cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
 
-        attachments = [pdf]
-        if excel != None:
-            attachments.append(excel)
 
-        SendEmail(name,email,attachments)
+        #excel = GetExcel(pdf)
+
+        #attachments = [pdf]
+        #if excel != None:
+        #    attachments.append(excel)
+
+        #SendEmail(name,email,attachments)
+
+        
+
 
     DeleteTempPdf()
     if errors != "":
         print("ERRORS:")
         print(errors)
+    con.commit()
+    cur.close()
+    con.close()
 
+
+
+
+
+def functions():
+    """just stuff that will be needed"""
+
+    #for getting all the details from an email
+    temp_email = "bob@gmail.com"
+    for result in cur.execute("SELECT * FROM FILES WHERE email = ?", (temp_email,),).fetchall():
+        print(result)
+        print(" ")
+
+    #finding out all unique emails
+    print("new statment :)")
+    for result in cur.execute("SELECT DISTINCT email FROM FILES").fetchall():
+        print(result[0])
+        print(" ")
     
 
 
