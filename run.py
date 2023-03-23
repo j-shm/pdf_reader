@@ -15,6 +15,10 @@ do_ocr = True
 
 #end options
 
+
+
+
+
 #debug options
 
 #delete ocr_pdf after use
