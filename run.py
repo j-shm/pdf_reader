@@ -132,7 +132,6 @@ def SendEmail(name, email, attachments):
     newmail=ol.CreateItem(olmailitem)
     newmail.Subject = f'{company_name} - {GetDate()} - {name.split(".")[0]}'
     newmail.To=''+email
-    newmail.CC=''+email
 
     for attach in attachments:
         newmail.Attachments.Add(file_dir+"\\"+attach)
