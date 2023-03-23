@@ -11,7 +11,6 @@ do_ocr = True #use if you are having with random spaces between words
 file_dir = os.getcwd()
 
 
-# we should really be using ocr to make sure it acc works
 def ConvertPdf(file) -> str:
     """open the file(pdf) and return the text"""
     if not do_ocr:
