@@ -3,6 +3,7 @@ import win32com.client
 import datetime
 import glob
 import ocrmypdf
+import os
 
 file_dir = "E:\\projects\\pdf_reader"
 
@@ -12,11 +13,11 @@ file_dir = "E:\\projects\\pdf_reader"
 def ConvertPdf(file) -> str:
     """open the file(pdf) and return the text"""
     try:
-        ocrmypdf.ocr(file, f'ocr_{file}',force_ocr = True)
+        ocrmypdf.ocr(file, f'temp/ocr_{file}',force_ocr = True)
     except Exception as e:
         print(e)
         return None
-    return f'ocr_{file}'
+    return f'temp/ocr_{file}'
 
 def GetText(file):
     if file == None:
@@ -25,8 +26,10 @@ def GetText(file):
     page = reader.pages[0]
     return page.extract_text()
 
-def DeletePdf(file):
-    
+def DeleteTempPdf():
+    files = glob.glob('temp/*')
+    for f in files:
+        os.remove(f)
 
 def SplitPdf(text):
     """Split the pdf into lines"""
@@ -96,19 +99,7 @@ def SendEmail(name, email, attachments):
     newmail.Display() 
 
 if __name__ == '__main__':
-    pdfs = GetPdf()
-    for pdf in pdfs:
-        text = GetText(ConvertPdf(pdf))
-        lines = SplitPdf(text)
-        for line in lines:
-            print(lines)
-        #name = ExtractName(lines)
-        #email = ExtractEmailAddress(lines)
-        #excel = GetExcel(pdf)
-        #attachments = [pdf]
-        #if excel != None:
-        #    attachments.append(excel)
-        #SendEmail(name,email,attachments)
+    DeleteTempPdf()
 
     
 
