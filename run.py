@@ -6,7 +6,7 @@ import ocrmypdf
 import os
 
 company_name = "company"
-do_ocr = True
+do_ocr = True #use if you are having with random spaces between words
 
 file_dir = os.getcwd()
 
@@ -50,7 +50,6 @@ def ExtractName(lines):
                 return splitlines[index+1].strip()
     return ""
 
-#sometimes multiple seperated by ;
 def ExtractEmailAddress(lines):
     """Get email from pdf"""
     for line in lines:
@@ -104,22 +103,30 @@ def SendEmail(name, email, attachments):
 
     newmail.Display() 
 
+def GetDetails(lines):
+    return ExtractName(lines),ExtractEmailAddress(lines)
+
+def GetLines(pdf):
+    return SplitPdf(GetText(converted_pdf))
+
 if __name__ == '__main__':
     errors = ""
     pdfs = GetPdf()
     for pdf in pdfs:
+
         converted_pdf = ConvertPdf(pdf)
         if converted_pdf == None:
             errors += f'{pdf} failed'
             continue
-        text = GetText(converted_pdf)
-        lines = SplitPdf(text)
-        name = ExtractName(lines)
-        email = ExtractEmailAddress(lines)
+        
+        lines = GetLines(converted_pdf)
+        name,email = GetDetails(lines)
         excel = GetExcel(pdf)
+
         attachments = [pdf]
         if excel != None:
             attachments.append(excel)
+
         SendEmail(name,email,attachments)
 
     DeleteTempPdf()
