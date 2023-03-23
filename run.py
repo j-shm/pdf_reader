@@ -2,17 +2,25 @@ from PyPDF2 import PdfReader
 import win32com.client
 import datetime
 import glob
+import ocrmypdf
 
 file_dir = "E:\\projects\\bunpdf\\"
 
 
 
 # we should really be using ocr to make sure it acc works
-def OpenPdf(file) -> str:
+def ConvertPdf(file) -> str:
     """open the file(pdf) and return the text"""
-    reader = PdfReader(file)
-    page = reader.pages[0]
-    return page.extract_text()
+    try:
+        ocrmypdf.ocr(file, f'ocr_{file}')
+    except Exception as e:
+        print(e)
+        return None
+    return f'ocr_{file}'
+
+
+
+
 
 def SplitPdf(text):
     """Split the pdf into lines"""
