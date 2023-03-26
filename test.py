@@ -27,4 +27,4 @@ if __name__ == '__main__':
             print("look for random spaces")
             print("if there are random spaces...")
             print("...where there should not be use ocr")
-            exit
+            exit()
