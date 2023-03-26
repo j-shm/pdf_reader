@@ -148,22 +148,15 @@ def GetLines(pdf):
 def SendEmails(list_of_unique_emails):
     for tup_email in list_of_unique_emails :
         email = tup_email[0]
+        name = tup_email[1]
 
         attachments = []
 
-        email_name: str = "" # THIS NEEDS CHECKED NOT SURE HOW TO HANDLE MULTIPLE NAMES (no spec).
-
-        sql_attachments = cur.execute("SELECT pdf FROM FILES WHERE email = ?", (email,),).fetchall()
+        sql_attachments = cur.execute("SELECT pdf FROM FILES WHERE email = ? AND name = ?", (email,name,),).fetchall()
         for attachment in sql_attachments:
             attachments.append(attachment[0])
 
-        sql_names = cur.execute("SELECT DISTINCT name FROM FILES WHERE email = ?", (email,),).fetchall()
-        for count,name in enumerate(sql_names):
-            email_name += name[0]
-            if len(sql_names) > 1 and count != len(sql_names)-1:
-                email_name += " & " 
-
-        SendEmail(email_name,email,attachments)
+        SendEmail(name,email,attachments)
 
 
 
@@ -184,7 +177,7 @@ if __name__ == '__main__':
         cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
 
 
-    list_of_unique_emails = cur.execute("SELECT DISTINCT email FROM FILES").fetchall()
+    list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
 
     SendEmails(list_of_unique_emails)
 
