@@ -138,7 +138,7 @@ def SendEmail(name, email, attachments):
 def GetDetails(lines):
     return ExtractName(lines),ExtractEmailAddress(lines)
 
-def GetLines(pdf):
+def GetLines():
     return SplitPdf(GetText(converted_pdf))
 
 
