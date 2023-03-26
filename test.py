@@ -17,10 +17,13 @@ if __name__ == '__main__':
         text = page.extract_text().split("\n")
         print(repr(text))
 
-        print("-=" + pdf + "=-")
+        print("-==-")
 
         if count == 5:
             print("look for random spaces")
             print("if there are random spaces...")
             print("...where there should not be use ocr")
             exit()
+    print("look for random spaces")
+    print("if there are random spaces...")
+    print("...where there should not be use ocr")
