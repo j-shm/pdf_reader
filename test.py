@@ -10,16 +10,12 @@ if __name__ == '__main__':
     for file in glob.glob("*.pdf"):
         pdfs.append(file)
     for count,pdf in enumerate(pdfs):
-        print("look for random spaces")
-        print("if there are random spaces...")
-        print("...where there should not be use ocr")
-
         print("-=" + pdf + "=-");
 
-        reader = PdfReader(file)
-        page = reader.pages[page]
+        reader = PdfReader(pdf)
+        page = reader.pages[0]
         text = page.extract_text().split("\n")
-        print(text)
+        print(repr(text))
 
         print("-=" + pdf + "=-")
 
