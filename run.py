@@ -5,6 +5,7 @@ import glob
 import ocrmypdf
 import os
 import sqlite3
+import re
 
 #options 
 
@@ -112,15 +113,11 @@ def GetPdf():
 def GetExcel(name):
     """Get excel for the pdf"""
     tname = name.split(".")[0]
-    file = glob.glob(f'{tname}.xsls')
-    if file:
-        return file[0]
-    
-    xlsxfile = glob.glob(f'{tname}.xlsx')
-    if xlsxfile:
-        return xlsxfile[0]
-    
-    return None
+    excel_files_1 = glob.glob("*.xsls")
+    excel_files_2 = glob.glob("*.xlsx")
+    excel_files = excel_files_1 + excel_files_2
+    matches = [string for string in excel_files if tname in string]
+    return matches
 
 
 
@@ -151,11 +148,14 @@ def SendEmails(list_of_unique_emails):
         name = tup_email[1]
 
         attachments = []
-
+        
         sql_attachments = cur.execute("SELECT pdf FROM FILES WHERE email = ? AND name = ?", (email,name,),).fetchall()
         for attachment in sql_attachments:
             attachments.append(attachment[0])
-
+            excels = GetExcel(attachment[0])
+            for excel in excels:
+                if excel not in attachments:
+                    attachments.append(excel) 
         SendEmail(name,email,attachments)
 
 
