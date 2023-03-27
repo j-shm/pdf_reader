@@ -5,7 +5,6 @@ import glob
 import ocrmypdf
 import os
 import sqlite3
-import re
 
 #options 
 
