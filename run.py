@@ -12,12 +12,9 @@ import re
 company_name = "company"
 
 #use if you are having with random spaces between words
-do_ocr = True 
+do_ocr = False 
 
 #end options
-
-
-
 
 
 #debug options
@@ -84,16 +81,15 @@ def ExtractName(lines):
         splitlines = line.split(":")
         for index, splitline in enumerate(splitlines):
             if splitline == "To":
-                return splitlines[index+1].strip()
+                return splitlines[index+1].strip()[:-5]
     return ""
 
 def ExtractEmailAddress(lines):
     """Get email from pdf"""
     for line in lines:
-        splitlines = line.split(":")
-        for index, splitline in enumerate(splitlines):
-            if splitline.strip() == "Email Address":
-                return splitlines[index+1].strip()
+        if "Email address:" in line:
+            splitline = line.split(":")[1].strip()[:-7]
+            return splitline
     return ""
 
 def GetDate():
@@ -138,11 +134,12 @@ def SendEmail(name, email, attachments):
 def GetDetails(lines):
     return ExtractName(lines),ExtractEmailAddress(lines)
 
-def GetLines():
+def GetLines(converted_pdf):
     return SplitPdf(GetText(converted_pdf))
 
 
 def SendEmails(list_of_unique_emails):
+    #used if there is multiple pdfs to one email
     for tup_email in list_of_unique_emails :
         email = tup_email[0]
         name = tup_email[1]
@@ -158,7 +155,17 @@ def SendEmails(list_of_unique_emails):
                     attachments.append(excel) 
         SendEmail(name,email,attachments)
 
-
+def SendEmails():
+    items = cur.execute("SELECT * FROM FILES").fetchall()
+    for item in items:
+        attachments = [item[0]]
+        email = item[1]
+        name = item[2]
+        excels = GetExcel(item[0].split(".")[0])
+        for excel in excels:
+            if excel not in attachments:
+                attachments.append(excel) 
+        SendEmail(name,email,attachments)
 
 
 if __name__ == '__main__':
@@ -177,9 +184,10 @@ if __name__ == '__main__':
         cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
 
 
-    list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
+    #list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
 
-    SendEmails(list_of_unique_emails)
+    #SendEmails(list_of_unique_emails)
+    SendEmails()
 
     if delete_ocr_pdf:
         DeleteTempPdf()
@@ -197,13 +205,3 @@ if __name__ == '__main__':
             os.remove("files.db")
         if os.path.exists("files.db-journal"):
             os.remove("files.db-journal")
-    
-
-
-
-
-
-
-    
-
-
