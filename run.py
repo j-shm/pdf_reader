@@ -13,6 +13,7 @@ company_name = "company"
 #use if you are having with random spaces between words
 do_ocr = False 
 
+one_at_a_time = True
 #end options
 
 
@@ -154,9 +155,13 @@ def SendEmails(list_of_unique_emails):
                     attachments.append(excel) 
         SendEmail(name,email,attachments)
 
-def SendEmails():
+def SendEmails():   
     items = cur.execute("SELECT * FROM FILES").fetchall()
     for item in items:
+        if one_at_a_time:
+            print("")
+            print("Enter anything to go to email: \nDetails:\n" + "From: " + company_name + "\n" + item[0] + "\n" + item[1] + "\n" + item[2])
+            input()
         attachments = [item[0]]
         email = item[1]
         name = item[2]
@@ -166,8 +171,14 @@ def SendEmails():
                 attachments.append(excel) 
         SendEmail(name,email,attachments)
 
-
 if __name__ == '__main__':
+    company_name = input("Enter company name: ")
+    print("COMPANY NAME: " + company_name)
+    print("")
+    selection = input("Type y to continue:")
+    if selection != "y":
+        exit()
+
     errors = ""
     pdfs = GetPdf()
     for pdf in pdfs:
@@ -198,9 +209,10 @@ if __name__ == '__main__':
     con.close()
     if delete_db:
         import time
-        print("waiting for delete")
+        print("waiting to delete temporary files (./temp/*) (pdfs will be safe) (don't close please)")
         time.sleep(5)
         if os.path.exists("files.db"):
             os.remove("files.db")
         if os.path.exists("files.db-journal"):
             os.remove("files.db-journal")
+
