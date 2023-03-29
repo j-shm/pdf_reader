@@ -9,6 +9,7 @@ import sqlite3
 #options 
 
 company_name = "company"
+send_from = ""
 
 #use if you are having with random spaces between words
 do_ocr = False 
@@ -129,6 +130,12 @@ def SendEmail(name, email, attachments):
     for attach in attachments:
         newmail.Attachments.Add(file_dir+"\\"+attach)
 
+    for account in ol.Session.Accounts:
+        if account.DisplayName == send_from:
+            print("email found.")
+            print(str(account) + "=" + send_from)
+            newmail._oleobj_.Invoke(*(64209, 0, 8, 0, account))
+
     newmail.Display() 
 
 def GetDetails(lines):
@@ -174,6 +181,8 @@ def SendEmails():
 if __name__ == '__main__':
     company_name = input("Enter company name: ")
     print("COMPANY NAME: " + company_name)
+    send_from = input("Enter email to send from: ")
+    print("EMAIL: " + send_from)
     print("")
     selection = input("Type y to continue:")
     if selection != "y":
