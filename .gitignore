@@ -3,3 +3,5 @@
 *.xlsx
 *.xsls
 *.db
+poppler
+files.db-journal

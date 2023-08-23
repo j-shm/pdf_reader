@@ -1,8 +1,8 @@
-from PyPDF2 import PdfReader
+from pdf2image import convert_from_path
+import pytesseract
 import win32com.client
 import datetime
 import glob
-import ocrmypdf
 import os
 import sqlite3
 
@@ -11,22 +11,17 @@ import sqlite3
 company_name = "company"
 send_from = ""
 
-#use if you are having with random spaces between words
-do_ocr = False 
-
 one_at_a_time = True
 #end options
 
 
 #debug options
 
-#delete ocr_pdf after use
-delete_ocr_pdf = True
-
-#delete db after use
 delete_db = True
 
 #end debug options
+
+
 
 if os.path.exists("files.db"):
     os.remove("files.db")
@@ -45,53 +40,22 @@ CREATE TABLE IF NOT EXISTS FILES (
 """
 cur.execute(table)
 
-def ConvertPdf(file) -> str:
-    """open the file(pdf) and return the text"""
-    if not do_ocr:
-        return file
-    if os.path.exists(f'temp/ocr_{file}'):
-        return f'temp/ocr_{file}'
-    try:
-        ocrmypdf.ocr(file, f'temp/ocr_{file}',force_ocr = True)
-    except Exception as e:
-        print(e)
-        return None
-    return f'temp/ocr_{file}'
 
-def GetText(file, page = 0):
-    """Get the text from the pdf"""
-    if file == None:
-        return None
-    reader = PdfReader(file)
-    page = reader.pages[page]
-    return page.extract_text()
+def GetImageFromPdf(pdf):
+    return convert_from_path(pdf,poppler_path=os.getcwd()+"/poppler/Library/bin")[0]
 
-def DeleteTempPdf():
-    """Delete the temporary ocr pdf"""
-    files = glob.glob('temp/*')
-    for f in files:
-        os.remove(f)
+#make singular function with diff paramaters!
 
-def SplitPdf(text):
-    """Split the pdf into lines"""
-    return text.split("\n")
+def CropName(pdf_image):
+    x,y = pdf_image.size
+    cropped_pdf_image = pdf_image.crop((530,240,990,261))
+    return cropped_pdf_image
 
-def ExtractName(lines):
-    """Get name from pdf"""
-    for line in lines:
-        splitlines = line.split(":")
-        for index, splitline in enumerate(splitlines):
-            if splitline == "To":
-                return splitlines[index+1].strip()[:-5]
-    return ""
+def CropEmailAddress(pdf_image):
+    x,y = pdf_image.size
+    cropped_pdf_image = pdf_image.crop((271.8,577.5,979.3,603.6))
+    return cropped_pdf_image
 
-def ExtractEmailAddress(lines):
-    """Get email from pdf"""
-    for line in lines:
-        if "Email address:" in line:
-            splitline = line.split(":")[1].strip()[:-7]
-            return splitline
-    return ""
 
 def GetDate():
     """Get month and year from pdf"""
@@ -178,38 +142,7 @@ def SendEmails():
                 attachments.append(excel) 
         SendEmail(name,email,attachments)
 
-if __name__ == '__main__':
-    company_name = input("Enter company name: ")
-    print("COMPANY NAME: " + company_name)
-    send_from = input("Enter email to send from: ")
-    print("EMAIL: " + send_from)
-    print("")
-    selection = input("Type y to continue:")
-    if selection != "y":
-        exit()
-
-    errors = ""
-    pdfs = GetPdf()
-    for pdf in pdfs:
-
-        converted_pdf = ConvertPdf(pdf)
-        if converted_pdf == None:
-            errors += f'{pdf} failed'
-            continue
-        
-        lines = GetLines(converted_pdf)
-        name,email = GetDetails(lines)
-        
-        cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
-
-
-    #list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
-
-    #SendEmails(list_of_unique_emails)
-    SendEmails()
-
-    if delete_ocr_pdf:
-        DeleteTempPdf()
+def Closer():
     if errors != "":
         print("ERRORS:")
         print(errors)
@@ -224,4 +157,40 @@ if __name__ == '__main__':
             os.remove("files.db")
         if os.path.exists("files.db-journal"):
             os.remove("files.db-journal")
+
+
+
+if __name__ == '__main__':
+    company_name = input("Enter company name: ")
+    print("COMPANY NAME: " + company_name)
+    send_from = input("Enter email to send from: ")
+    print("EMAIL: " + send_from)
+    print("")
+    selection = input("Type y to continue:")
+    if selection != "y":
+        exit()
+
+    errors = ""
+    pdfs = GetPdf()
+    for pdf in pdfs:
+        pdf_img = GetImageFromPdf(pdf)
+
+        email_img = CropEmailAddress(pdf_img)
+        name_img = CropName(pdf_img)
+
+        print("reading images...")
+        name = pytesseract.image_to_string(name_img).strip()
+        email = pytesseract.image_to_string(email_img).strip()
+
+        print("read images!")
+        
+        cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
+
+
+    #list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
+
+    SendEmails()
+
+
+
 
