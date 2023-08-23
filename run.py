@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS FILES (
 """
 cur.execute(table)
 
-
 def GetImageFromPdf(pdf):
     return convert_from_path(pdf,poppler_path=os.getcwd()+"/poppler/Library/bin")[0]
 
@@ -55,7 +54,6 @@ def CropEmailAddress(pdf_image):
     x,y = pdf_image.size
     cropped_pdf_image = pdf_image.crop((271.8,577.5,979.3,603.6))
     return cropped_pdf_image
-
 
 def GetDate():
     """Get month and year from pdf"""
@@ -79,9 +77,6 @@ def GetExcel(name):
     excel_files = excel_files_1 + excel_files_2
     matches = [string for string in excel_files if tname in string]
     return matches
-
-
-
 
 def SendEmail(name, email, attachments):
     """generate email"""
@@ -107,7 +102,6 @@ def GetDetails(lines):
 
 def GetLines(converted_pdf):
     return SplitPdf(GetText(converted_pdf))
-
 
 def SendEmails(list_of_unique_emails):
     #used if there is multiple pdfs to one email
@@ -158,8 +152,6 @@ def Closer():
         if os.path.exists("files.db-journal"):
             os.remove("files.db-journal")
 
-
-
 if __name__ == '__main__':
     company_name = input("Enter company name: ")
     print("COMPANY NAME: " + company_name)
@@ -190,7 +182,3 @@ if __name__ == '__main__':
     #list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
 
     SendEmails()
-
-
-
-
