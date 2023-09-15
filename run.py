@@ -1,76 +1,193 @@
+import os
+import sqlite3
+import tkinter as tk
+from tkinter import filedialog, messagebox
 from pdf2image import convert_from_path
 import pytesseract
 import win32com.client
 import datetime
 import glob
-import os
-import sqlite3
 
-#options 
+# Initialize Tkinter
+root = tk.Tk()
+root.title("PDF Emailer")
+root.geometry("400x400")
 
-company_name = "company"
-send_from = ""
 
+# Options
+company_name = "Company"
+send_from = tk.StringVar()
 one_at_a_time = True
-#end options
 
-
-#debug options
-
+# Debug options
 delete_db = True
 
-#end debug options
 
 
 
+# Create SQLite database and cursor
 if os.path.exists("files.db"):
     os.remove("files.db")
 if os.path.exists("files.db-journal"):
     os.remove("files.db-journal")
 
-file_dir = os.getcwd()
 con = sqlite3.connect("files.db")
-cur = con.cursor()#
+cur = con.cursor()
+
 table = """
 CREATE TABLE IF NOT EXISTS FILES (
-	pdf text PRIMARY KEY,
+    pdf text PRIMARY KEY,
     email text,
-	name text
+    name text
 );
 """
 cur.execute(table)
 
-def GetImageFromPdf(pdf):
-    return convert_from_path(pdf,poppler_path=os.getcwd()+"/poppler/Library/bin")[0]
 
-#make singular function with diff paramaters!
+def select_directory():
+    status_text.config(text="Processing PDFs..." )
+    directory = filedialog.askdirectory()
+    if directory:
+        os.chdir(directory)
+        pdfs = GetPdf()
+        process_pdfs(pdfs)
+
+
+def process_pdfs(pdfs):
+    errors = ""
+    
+    for pdf in pdfs:
+        pdf_img = GetImageFromPdf(pdf)
+
+        email_img = CropEmailAddress(pdf_img)
+        name_img = CropName(pdf_img)
+
+        name = pytesseract.image_to_string(name_img).strip()
+        email = pytesseract.image_to_string(email_img).strip()
+
+        pdf_img.save(f"temp_img\pdf${pdf}.png")
+        email_img.save(f"temp_img\email${pdf}.png")
+        name_img.save(f"temp_img\\name${pdf}.png")
+
+
+        cur.execute('INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)', (pdf, email, name))
+
+    status_text.config(text=f"Processed {len(pdf)} pdfs")
+    send_emails_one_at_a_time_ui()
+
+file_iterator = None
+
+def send_emails_one_at_a_time_ui():
+    items = cur.execute("SELECT * FROM FILES").fetchall()
+    global file_iterator
+    file_iterator = iter(items)
+
+
+def next_email():
+    try:
+        item = next(file_iterator)
+        print("next!")
+        details_text ="Details:\n" + "From: " + company_name + "\n" + item[0] + "\n" +item[1] + "\n" + item[2]
+        email_details_label.config(text=details_text)
+        open_email(item)
+    except StopIteration:
+        email_details_label.config(text="All emails done!")
+        Closer()
+
+def open_email(item):
+        details_text ="Details:\n" + "From: " + company_name + "\n" + item[0] + "\n" +item[1] + "\n" + item[2]
+        email_details_label.config(text=details_text)
+        attachments = [item[0]]
+        email = item[1]
+        name = item[2]
+        excels = GetExcel(item[0].split(".")[0])
+        for excel in excels:
+            if excel not in attachments:
+                attachments.append(excel)
+        send_email(name, email, attachments)
+
+def send_emails_one_at_a_time():
+    items = cur.execute("SELECT * FROM FILES").fetchall()
+    for item in items:
+        details_text ="Details:\n" + "From: " + company_name + "\n" + item[0] + "\n" +item[1] + "\n" + item[2]
+        email_details_label.config(text=details_text)
+        input()
+        attachments = [item[0]]
+        email = item[1]
+        name = item[2]
+        excels = GetExcel(item[0].split(".")[0])
+        for excel in excels:
+            if excel not in attachments:
+                attachments.append(excel)
+        send_email(name, email, attachments)
+
+
+
+def send_emails():
+    list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
+    for tup_email in list_of_unique_emails:
+        email = tup_email[0]
+        name = tup_email[1]
+
+        attachments = []
+
+        sql_attachments = cur.execute("SELECT pdf FROM FILES WHERE email = ? AND name = ?", (email, name), ).fetchall()
+        for attachment in sql_attachments:
+            attachments.append(attachment[0])
+            excels = GetExcel(attachment[0].split(".")[0])
+            for excel in excels:
+                if excel not in attachments:
+                    attachments.append(excel)
+        send_email(name, email, attachments)
+
+
+def send_email(name, email, attachments):
+    ol = win32com.client.Dispatch("outlook.application")
+    olmailitem = 0x0
+    newmail = ol.CreateItem(olmailitem)
+    newmail.Subject = f'{company_name} - {GetDate()} - {name.split(".")[0]}'
+    newmail.To = '' + email
+
+    for attach in attachments:
+        newmail.Attachments.Add(os.getcwd() + "\\" + attach)
+
+    for account in ol.Session.Accounts:
+        if account.DisplayName == send_from.get():
+            newmail._oleobj_.Invoke(*(64209, 0, 8, 0, account))
+            newmail.Display()
+
+
+def GetImageFromPdf(pdf):
+    return convert_from_path(pdf, poppler_path=os.getcwd() + "/poppler/Library/bin")[0]
+
 
 def CropName(pdf_image):
-    x,y = pdf_image.size
-    cropped_pdf_image = pdf_image.crop((530,240,990,261))
+    x, y = pdf_image.size
+    cropped_pdf_image = pdf_image.crop((530, 240, 990, 261))
     return cropped_pdf_image
+
 
 def CropEmailAddress(pdf_image):
-    x,y = pdf_image.size
-    cropped_pdf_image = pdf_image.crop((271.8,577.5,979.3,603.6))
+    x, y = pdf_image.size
+    cropped_pdf_image = pdf_image.crop((271.8, 577.5, 979.3, 603.6))
     return cropped_pdf_image
 
+
 def GetDate():
-    """Get month and year from pdf"""
     now = datetime.datetime.now()
     month = now.strftime('%B')
     year = now.year
     return f'{month} {year}'
 
+
 def GetPdf():
-    """Get all pdf in dir"""
     pdfs = []
     for file in glob.glob("*.pdf"):
         pdfs.append(file)
     return pdfs
 
+
 def GetExcel(name):
-    """Get excel for the pdf"""
     tname = name.split(".")[0]
     excel_files_1 = glob.glob("*.xsls")
     excel_files_2 = glob.glob("*.xlsx")
@@ -78,63 +195,6 @@ def GetExcel(name):
     matches = [string for string in excel_files if tname in string]
     return matches
 
-def SendEmail(name, email, attachments):
-    """generate email"""
-    ol=win32com.client.Dispatch("outlook.application")
-    olmailitem=0x0 
-    newmail=ol.CreateItem(olmailitem)
-    newmail.Subject = f'{company_name} - {GetDate()} - {name.split(".")[0]}'
-    newmail.To=''+email
-
-    for attach in attachments:
-        newmail.Attachments.Add(file_dir+"\\"+attach)
-
-    for account in ol.Session.Accounts:
-        if account.DisplayName == send_from:
-            print("email found.")
-            print(str(account) + "=" + send_from)
-            newmail._oleobj_.Invoke(*(64209, 0, 8, 0, account))
-
-    newmail.Display() 
-
-def GetDetails(lines):
-    return ExtractName(lines),ExtractEmailAddress(lines)
-
-def GetLines(converted_pdf):
-    return SplitPdf(GetText(converted_pdf))
-
-def SendEmails(list_of_unique_emails):
-    #used if there is multiple pdfs to one email
-    for tup_email in list_of_unique_emails :
-        email = tup_email[0]
-        name = tup_email[1]
-
-        attachments = []
-        
-        sql_attachments = cur.execute("SELECT pdf FROM FILES WHERE email = ? AND name = ?", (email,name,),).fetchall()
-        for attachment in sql_attachments:
-            attachments.append(attachment[0])
-            excels = GetExcel(attachment[0])
-            for excel in excels:
-                if excel not in attachments:
-                    attachments.append(excel) 
-        SendEmail(name,email,attachments)
-
-def SendEmails():   
-    items = cur.execute("SELECT * FROM FILES").fetchall()
-    for item in items:
-        if one_at_a_time:
-            print("")
-            print("Enter anything to go to email: \nDetails:\n" + "From: " + company_name + "\n" + item[0] + "\n" + item[1] + "\n" + item[2])
-            input()
-        attachments = [item[0]]
-        email = item[1]
-        name = item[2]
-        excels = GetExcel(item[0].split(".")[0])
-        for excel in excels:
-            if excel not in attachments:
-                attachments.append(excel) 
-        SendEmail(name,email,attachments)
 
 def Closer():
     if errors != "":
@@ -145,39 +205,51 @@ def Closer():
     con.close()
     if delete_db:
         import time
-        print("waiting to delete temporary files (./temp/*) (pdfs will be safe) (don't close please)")
+        print("Waiting to delete temporary files (./temp/*) (PDFs will be safe) (please don't close)")
         time.sleep(5)
         if os.path.exists("files.db"):
             os.remove("files.db")
         if os.path.exists("files.db-journal"):
             os.remove("files.db-journal")
 
+
 if __name__ == '__main__':
-    company_name = input("Enter company name: ")
-    print("COMPANY NAME: " + company_name)
-    send_from = input("Enter email to send from: ")
-    print("EMAIL: " + send_from)
-    print("")
-    selection = input("Type y to continue:")
-    if selection != "y":
-        exit()
+    print("Please use the ui")
+    label = tk.Label(root, text="PDF Emailer", font=("Arial", 16))
+    label.pack(pady=20)
 
-    errors = ""
-    pdfs = GetPdf()
-    for pdf in pdfs:
-        pdf_img = GetImageFromPdf(pdf)
+    ol = win32com.client.Dispatch("outlook.application")
 
-        email_img = CropEmailAddress(pdf_img)
-        name_img = CropName(pdf_img)
-
-        print("reading images...")
-        name = pytesseract.image_to_string(name_img).strip()
-        email = pytesseract.image_to_string(email_img).strip()
-        print("read images!")
-        
-        cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
+    accounts = []
+    for account in ol.Session.Accounts:
+        accounts.append(account.DisplayName)
+    ol.Quit()
 
 
-    #list_of_unique_emails = cur.execute("SELECT DISTINCT email,name FROM FILES").fetchall()
+    company_name_label = tk.Label(root, text="Enter company name:")
+    company_name_label.pack()
 
-    SendEmails()
+    company_name_entry = tk.Entry(root)
+    company_name_entry.pack(pady = 10)
+
+    send_from_label = tk.Label(root, text="Enter email to send from:")
+    send_from_label.pack()
+
+    send_from.set(accounts[0])
+    dropdown = tk.OptionMenu(root, send_from, *accounts)
+    dropdown.pack(pady = 10)
+
+    select_button = tk.Button(root, text="Select Directory", command=select_directory)
+    select_button.pack(pady = 20)
+
+    status_text = tk.Label(root, text="Waiting for directory...")
+    status_text.pack()
+
+    email_details_label = tk.Label(root, text="", font=("Arial", 12))
+    email_details_label.pack(pady=10)
+    
+    next_item_button = tk.Button(root, text="Next Item", command=next_email)
+    next_item_button.pack(pady = 20)
+
+
+    root.mainloop()
