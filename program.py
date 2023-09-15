@@ -11,7 +11,7 @@ import glob
 # Initialize Tkinter
 root = tk.Tk()
 root.title("PDF Emailer")
-root.geometry("400x400")
+root.geometry("400x600")
 
 
 # Options
@@ -45,6 +45,8 @@ cur.execute(table)
 
 
 def select_directory():
+    global company_name
+    company_name = company_name_entry.get()
     status_text.config(text="Processing PDFs..." )
     directory = filedialog.askdirectory()
     if directory:
