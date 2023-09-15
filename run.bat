@@ -1,1 +1,1 @@
-py uirun.py
+py program.py
