@@ -173,7 +173,6 @@ if __name__ == '__main__':
         print("reading images...")
         name = pytesseract.image_to_string(name_img).strip()
         email = pytesseract.image_to_string(email_img).strip()
-
         print("read images!")
         
         cur.execute(f'INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)',(pdf,email,name))
