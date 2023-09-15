@@ -55,24 +55,33 @@ def select_directory():
 
 def process_pdfs(pdfs):
     errors = ""
-    
+    main_path = os.getcwd() + "\\temp_img\\"
     for pdf in pdfs:
+        
         pdf_img = GetImageFromPdf(pdf)
 
         email_img = CropEmailAddress(pdf_img)
         name_img = CropName(pdf_img)
 
+        print("reading pdf " + pdf + "...")
+
         name = pytesseract.image_to_string(name_img).strip()
         email = pytesseract.image_to_string(email_img).strip()
 
-        pdf_img.save(f"temp_img\pdf${pdf}.png")
-        email_img.save(f"temp_img\email${pdf}.png")
-        name_img.save(f"temp_img\\name${pdf}.png")
+        print("read pdf " + pdf + "...")
 
+        path = main_path + pdf.split(".")[0] +"\\"
+        if not os.path.exists(path):
+            os.makedirs(path)
+            pdf_img.save(f"{path}pdf.png")
+            email_img.save(f"{path}email.png")
+            name_img.save(f"{path}name.png")
+        
 
         cur.execute('INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)', (pdf, email, name))
 
     status_text.config(text=f"Processed {len(pdf)} pdfs")
+    print("Temp files saved to " + main_path)
     send_emails_one_at_a_time_ui()
 
 file_iterator = None
@@ -86,7 +95,6 @@ def send_emails_one_at_a_time_ui():
 def next_email():
     try:
         item = next(file_iterator)
-        print("next!")
         details_text ="Details:\n" + "From: " + company_name + "\n" + item[0] + "\n" +item[1] + "\n" + item[2]
         email_details_label.config(text=details_text)
         open_email(item)
