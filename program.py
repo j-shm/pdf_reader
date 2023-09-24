@@ -7,6 +7,7 @@ import pytesseract
 import win32com.client
 import datetime
 import glob
+import re
 
 # Initialize Tkinter
 root = tk.Tk()
@@ -56,34 +57,20 @@ def select_directory():
 
 
 def process_pdfs(pdfs):
-    errors = ""
-    main_path = os.getcwd() + "\\temp_img\\"
+
     for pdf in pdfs:
         
         pdf_img = GetImageFromPdf(pdf)
+        pdf_text = pytesseract.image_to_string(pdf_img)
 
-        email_img = CropEmailAddress(pdf_img)
-        name_img = CropName(pdf_img)
-
-        print("reading pdf " + pdf + "...")
-
-        name = pytesseract.image_to_string(name_img).strip()
-        email = pytesseract.image_to_string(email_img).strip()
+        name = re.findall("To:(.*?)From:",pdf_text)[0].strip()
+        email = re.findall("Email address:(.*?)VAT Nr:",pdf_text)[0].strip()
 
         print("read pdf " + pdf + "...")
-
-        path = main_path + pdf.split(".")[0] +"\\"
-        if not os.path.exists(path):
-            os.makedirs(path)
-            pdf_img.save(f"{path}pdf.png")
-            email_img.save(f"{path}email.png")
-            name_img.save(f"{path}name.png")
-        
 
         cur.execute('INSERT INTO FILES(pdf,email,name) VALUES(?,?,?)', (pdf, email, name))
 
     status_text.config(text=f"Processed {len(pdf)} pdfs")
-    print("Temp files saved to " + main_path)
     send_emails_one_at_a_time_ui()
 
 file_iterator = None
@@ -121,7 +108,6 @@ def send_emails_one_at_a_time():
     for item in items:
         details_text ="Details:\n" + "From: " + company_name + "\n" + item[0] + "\n" +item[1] + "\n" + item[2]
         email_details_label.config(text=details_text)
-        input()
         attachments = [item[0]]
         email = item[1]
         name = item[2]
@@ -171,17 +157,6 @@ def GetImageFromPdf(pdf):
     return convert_from_path(pdf, poppler_path=os.getcwd() + "/poppler/Library/bin")[0]
 
 
-def CropName(pdf_image):
-    x, y = pdf_image.size
-    cropped_pdf_image = pdf_image.crop((530, 240, 990, 261))
-    return cropped_pdf_image
-
-
-def CropEmailAddress(pdf_image):
-    x, y = pdf_image.size
-    cropped_pdf_image = pdf_image.crop((271.8, 577.5, 979.3, 603.6))
-    return cropped_pdf_image
-
 
 def GetDate():
     now = datetime.datetime.now()
@@ -207,9 +182,6 @@ def GetExcel(name):
 
 
 def Closer():
-    if errors != "":
-        print("ERRORS:")
-        print(errors)
     con.commit()
     cur.close()
     con.close()
