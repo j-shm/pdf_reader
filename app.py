@@ -18,9 +18,10 @@ def send_handler(companyname:str,emailname:str):
         return "Please enter a company name and email"
     if email_to_send:
         outlook_email(email_to_send.name, email_to_send.email, GetExcel(email_to_send.pdf), companyname,emailname)
+        files.delete(email_to_send.id)
     else:
         return "No emails to send"
-    return GetTable()
+    return GetTable() + f"<h1>Last Opened: {email_to_send.pdf}</h1>"
     
 
 
@@ -70,6 +71,8 @@ def PdfExists(pdf):
 @app.route("/table", methods=['post'])
 def GetTable():
     print("Getting table")
+    if(len(files()) == 0):
+        return "<h1>No emails left 🐰🎊🎊🎊🎊</h1>"
     table = f"<h1>{len(files())} emails left</h1><table><tr><th>Name</th><th>Email</th><th>PDF</th></tr>"
     for file in (files()):
         table += "<tr><td>" + file.name + "</td><td>" + file.email + "</td><td>" + file.pdf + "</td></tr>"
