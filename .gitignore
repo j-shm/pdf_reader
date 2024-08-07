@@ -6,3 +6,10 @@
 poppler
 files.db-journal
 packed_program.zip
+.sesskey
+files.db-shm
+files.db-wal
+__pycache__/app.cpython-311.pyc
+__pycache__/test.cpython-311.pyc
+data/files.db-shm
+data/files.db-wal
