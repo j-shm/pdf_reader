@@ -27,8 +27,8 @@ def send_handler(companyname:str,emailname:str):
 
 def GetExcel(name):
     tname = name.split(".")[0]
-    excel_files_1 = glob.glob("*.xsls")
-    excel_files_2 = glob.glob("*.xlsx")
+    excel_files_1 = glob.glob("pdf/*.xsls")
+    excel_files_2 = glob.glob("pdf/*.xlsx")
     excel_files = excel_files_1 + excel_files_2
     matches = [string for string in excel_files if tname in string]
     return matches
@@ -58,7 +58,7 @@ def GetDate():
 
 def GetPdf():
     pdfs = []
-    for file in glob.glob("*.pdf"):
+    for file in glob.glob("pdf/*.pdf"):
         pdfs.append(file)
     return pdfs
 
