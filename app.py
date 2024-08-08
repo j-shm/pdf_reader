@@ -17,7 +17,7 @@ def send_handler(companyname:str,emailname:str):
     if companyname == "" or emailname == "":
         return "Please enter a company name and email"
     if email_to_send:
-        outlook_email(email_to_send.name, email_to_send.email, GetExcel(email_to_send.pdf), companyname,emailname)
+        outlook_email(email_to_send.name, email_to_send.email, GetExcel(email_to_send.pdf), companyname,emailname,email_to_send.pdf)
         files.delete(email_to_send.id)
     else:
         return "No emails to send"
@@ -34,7 +34,7 @@ def GetExcel(name):
     return matches
 
 
-def outlook_email(name, email, attachments, company_name,email_account):
+def outlook_email(name, email, attachments, company_name,email_account,pdf):
     ol = win32com.client.Dispatch("outlook.application")
     olmailitem = 0x0
     newmail = ol.CreateItem(olmailitem)
@@ -43,7 +43,7 @@ def outlook_email(name, email, attachments, company_name,email_account):
 
     for attach in attachments:
         newmail.Attachments.Add(os.getcwd() + "\\" + attach)
-
+    newmail.Attachments.Add(os.getcwd() + "\\" + pdf)
     for account in ol.Session.Accounts:
         if account.DisplayName == email_account:
             newmail._oleobj_.Invoke(*(64209, 0, 8, 0, account))
